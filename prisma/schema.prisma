@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Plan {
+  id           String   @id
+  name         String
+  priceMonthly Float    @default(0)
+  maxUsers     Int
+  maxCases     Int
+  features     String   @default("[]")
+  tenants      Tenant[]
+}
+
+model Tenant {
+  id          String          @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  ice         String?
+  ifNumber    String?
+  rcNumber    String?
+  cnssNumber  String?
+  tpNumber    String?
+  planId      String?
+  plan        Plan?           @relation(fields: [planId], references: [id])
+  trialEndsAt DateTime?
+  createdAt   DateTime        @default(now())
+  settings    TenantSettings?
+  users       User[]
+  clients     Client[]
+  cases       Case[]
+  hearings    Hearing[]
+  invoices    Invoice[]
+  expenses    Expense[]
+  tasks       Task[]
+  documents   Document[]
+  activities  Activity[]
+}
+
+model TenantSettings {
+  id            String  @id @default(cuid())
+  tenantId      String  @unique
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoicePrefix   String  @default("FAC")
+  tvaRate         Float   @default(20)
+  invoiceLanguage String  @default("AR")
+  reminderDays    Int     @default(7)
+  footerNote      String?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   @default("LAWYER")
+  phone        String?
+  barNumber    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  cases        Case[]   @relation("LawyerCases")
+  tasks        Task[]   @relation("AssigneeTasks")
+  permissions  UserPermission[]
+}
+
+model UserPermission {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    String
+  action    String @default("VIEW")
+  allowed   Boolean @default(true)
+  @@unique([userId, module, action])
+}
+
+model Client {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind        String    @default("INDIVIDUAL")
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  cin         String?
+  ice         String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  cases       Case[]
+  invoices    Invoice[]
+  @@index([tenantId])
+}
+
+model Case {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reference      String
+  title          String
+  description    String?
+  type           String    @default("CIVIL")
+  status         String    @default("NEW")
+  priority       String    @default("MEDIUM")
+  clientId       String
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  opposingParty  String?
+  courtName      String?
+  courtCity      String?
+  lawyerId       String?
+  lawyer         User?     @relation("LawyerCases", fields: [lawyerId], references: [id], onDelete: SetNull)
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  feesAgreed     Float     @default(0)
+  hearings       Hearing[]
+  tasks          Task[]
+  expenses       Expense[]
+  documents      Document[]
+  invoices       Invoice[]
+  @@unique([tenantId, reference])
+  @@index([tenantId])
+}
+
+model Hearing {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  dateTime  DateTime
+  courtName String?
+  room      String?
+  status    String   @default("SCHEDULED")
+  notes     String?
+  decision  String?
+  createdAt DateTime @default(now())
+  @@index([tenantId, dateTime])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String    @default("TODO")
+  priority    String    @default("MEDIUM")
+  caseId      String?
+  case        Case?     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?     @relation("AssigneeTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  @@index([tenantId])
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number    String
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  caseId    String?
+  case      Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  status    String        @default("DRAFT")
+  issueDate DateTime      @default(now())
+  dueDate   DateTime?
+  subtotal  Float
+  tvaRate   Float         @default(20)
+  tvaAmount Float
+  total     Float
+  notes     String?
+  items     InvoiceItem[]
+  payments  Payment[]
+  @@unique([tenantId, number])
+  @@index([tenantId])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  qty         Float   @default(1)
+  unitPrice   Float
+  amount      Float
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Float
+  method    String   @default("CASH")
+  reference String?
+  paidAt    DateTime @default(now())
+}
+
+model Expense {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  caseId       String?
+  case         Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  label        String
+  category     String   @default("OTHER")
+  amount       Float
+  date         DateTime
+  reimbursable Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  @@index([tenantId])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  caseId     String?
+  case       Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name       String
+  filePath   String
+  mimeType   String?
+  size       Int?
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+  @@index([tenantId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String?
+  userName  String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      String?
+  createdAt DateTime @default(now())
+  @@index([tenantId, createdAt])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  createdAt DateTime @default(now())
+}
