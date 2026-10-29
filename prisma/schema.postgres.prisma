@@ -1,0 +1,18 @@
+// قالب PostgreSQL للإنتاج
+// للتبديل: انسخ محتواه إلى prisma/schema.prisma ثم نفّذ:
+//   npx prisma db push   (ينشئ الجداول على قاعدة Postgres)
+//   npx prisma db seed   (يملأ بيانات تجريبية إن أردت)
+// في Vercel/Neon: أنشئ قاعدة على https://neon.tech وضَع رابطها في متغير DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// جميع النماذج أدناه مطابقة لـ prisma/schema.prisma تماماً —
+// الفرق الوحيد هو مزود قاعدة البيانات أعلاه (postgresql بدل sqlite).
+// انسخ نماذجها كما هي من schema.prisma.
