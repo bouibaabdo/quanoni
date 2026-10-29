@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "regions": ["cdg1"],
+  "env": {
+    "DATABASE_URL": "@qanoni_database_url",
+    "AUTH_SECRET": "@qanoni_auth_secret"
+  }
+}
