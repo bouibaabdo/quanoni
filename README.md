@@ -13,7 +13,32 @@ npm run db:seed    # بيانات تجريبية جاهزة (اختياري)
 npm run dev        # التشغيل على http://localhost:3000
 ```
 
-أو ببساطة على ويندوز: **انقر مرتين على `start.bat`**.
+أو ببساطة على ويندوز: **انقر مرتين على `start.bat`**، أو على لينكس/ماك نفّذ:
+
+```bash
+./start.sh        # تشغيل آمن: يصلح تلقائياً أي ملف تالف ثم يشتغل
+```
+
+## أدوات الوقاية والنشر
+
+| الأداة | الوظيفة |
+|---|---|
+| `start.sh` / `start.bat` | تشغيل آمن: يصلح `package.json`، يثبّت الناقص، يهيئ قاعدة البيانات، ثم يشتغل |
+| `guard.mjs` | يعمل في الخلفية: يراقب `package.json` كل 10 ثوانٍ ويعيد إنشاءه إن استُبدل/حُذف (شغّله بـ `node guard.mjs`) |
+| `setup-prod.sh` | إعداد الإنتاج: يبدّل المخطط إلى PostgreSQL، ينشئ الجداول، يملأ البيانات، ويُرشد للنشر على Vercel |
+| `vercel.json` + `.env.example` | إعدادات النشر ومتغيرات البيئة الجاهزة |
+
+### النشر على Vercel (إنتاج)
+
+```bash
+# 1) في لوحة Vercel: Settings → Environment Variables → أضف:
+#    DATABASE_URL="postgresql://..."   (من neon.tech أو supabase.com)
+#    AUTH_SECRET="<قيمة عشوائية طويلة>"
+# 2) محلياً: ./setup-prod.sh   (يبدّل إلى Postgres وينشئ الجداول)
+# 3) في Vercel: Redeploy
+```
+
+> **مهم**: `.env` و`node_modules` و`prisma/dev.db` كلها مستثناة في `.gitignore` — لا تُرفع أبداً إلى Git.
 
 ## حسابات تجريبية (بعد الـ seed)
 
